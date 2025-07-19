@@ -6,17 +6,38 @@ import { getGeminiSuggestion } from "./geminiService.js";
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+const allowedOrigins = [
+  "https://bubbash.netlify.app",
+  // You can add your local dev URL, e.g. 'http://localhost:3000'
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        return callback(null, true);
+      } else {
+        return callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
+
 app.use(express.json());
+
+// Handle preflight requests for all routes
+app.options("*", cors());
 
 app.post("/api/get-suggestions", async (req, res) => {
   try {
     const { bubbles } = req.body;
-
     if (!bubbles || !Array.isArray(bubbles)) {
       return res.status(400).json({ error: "Invalid 'bubbles' array." });
     }
-
     const suggestion = await getGeminiSuggestion(bubbles);
     res.json({ suggestion });
   } catch (error) {
